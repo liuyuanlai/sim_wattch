@@ -1081,7 +1081,7 @@ sim_check_options(struct opt_odb_t *odb,        /* options database */
     {
       //cs203A
       if (sscanf(cache_dl1_opt, "%[^:]:%d:%d:%d:%c:%d",
-		 name, &nsets, &bsize, &assoc, &c) != 6)
+		 name, &nsets, &bsize, &assoc, &c, &dl1_prefetch_block_count) != 6)
 	fatal("bad l1 D-cache parms: <name>:<nsets>:<bsize>:<assoc>:<repl>:<prefetchblkcount>");
       cache_dl1 = cache_create(name, nsets, bsize, /* balloc */FALSE,
 			       /* usize */0, assoc, cache_char2policy(c),
@@ -1138,7 +1138,7 @@ sim_check_options(struct opt_odb_t *odb,        /* options database */
     {
       //cs203A
       if (sscanf(cache_il1_opt, "%[^:]:%d:%d:%d:%c:%d",
-		 name, &nsets, &bsize, &assoc, &c) != 6)
+		 name, &nsets, &bsize, &assoc, &c, &il1_prefetch_block_count) != 6)
 	fatal("bad l1 I-cache parms: <name>:<nsets>:<bsize>:<assoc>:<repl>:<prefetchblkcount>");
       cache_il1 = cache_create(name, nsets, bsize, /* balloc */FALSE,
 			       /* usize */0, assoc, cache_char2policy(c),
