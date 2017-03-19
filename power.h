@@ -273,6 +273,7 @@
 #define Vbitpre		(3.3 * SSCALE)
 #define Vt		(1.09 * VTSCALE)
 #define Vbitsense	(0.10 * SSCALE)
+//cs203A define FSF and VSF for DVFS
 static double FSF = 1.0;
 static double VSF = 1.0;
 #define Powerfactor (FSF*(Mhz)*VSF*VSF*Vdd*Vdd)
@@ -584,6 +585,6 @@ void output_data(time_result_type*, time_parameter_type*);
 void calculate_power(power_result_type*);
 int pop_count(quad_t bits);
 int pop_count_slow(quad_t bits);
-
+//cs203a declare dvfs controller function
 void dvfs_controller();
 

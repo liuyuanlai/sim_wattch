@@ -369,7 +369,7 @@ static counter_t sim_num_branches = 0;
 static counter_t sim_total_branches = 0;
 
 /* cycle counter */
-//cs203
+//cs203A for using sim_cycle in power.c
 tick_t sim_cycle = 0;
 
 /* occupancy counters */
@@ -790,9 +790,10 @@ sim_reg_options(struct opt_odb_t *odb)
 
   /* cache options */
 
+  //cs203A
   opt_reg_string(odb, "-cache:dl1",
 		 "l1 data cache config, i.e., {<config>|none}",
-		 &cache_dl1_opt, "dl1:128:32:4:l",
+		 &cache_dl1_opt, "dl1:128:32:4:l:0",
 		 /* print */TRUE, NULL);
 
   opt_reg_note(odb,
@@ -824,10 +825,10 @@ sim_reg_options(struct opt_odb_t *odb)
 	      "l2 data cache hit latency (in cycles)",
 	      &cache_dl2_lat, /* default */6,
 	      /* print */TRUE, /* format */NULL);
-
+  //cs203A
   opt_reg_string(odb, "-cache:il1",
 		 "l1 inst cache config, i.e., {<config>|dl1|dl2|none}",
-		 &cache_il1_opt, "il1:512:32:1:l",
+		 &cache_il1_opt, "il1:512:32:1:l:0",
 		 /* print */TRUE, NULL);
 
   opt_reg_note(odb,
@@ -928,7 +929,7 @@ sim_reg_options(struct opt_odb_t *odb)
 	       "operate in backward-compatible bugs mode (for testing only)",
 	       &bugcompat_mode, /* default */FALSE, /* print */TRUE, NULL);
 
-//cs203
+//cs203A adding the option to take DVFSInterval as input from the user
   opt_reg_int(odb, "-dvfs:interval", "DVFS Internals",
 		&dvfs_interval, 100000,
 		TRUE, NULL);
@@ -944,6 +945,10 @@ sim_check_options(struct opt_odb_t *odb,        /* options database */
 {
   char name[128], c;
   int nsets, bsize, assoc;
+
+  //cs203A
+  int dl1_prefetch_block_count;
+  int il1_prefetch_block_count;
 
   if (fastfwd_count < 0 || fastfwd_count >= 2147483647)
     fatal("bad fast forward count: %d", fastfwd_count);
@@ -1074,12 +1079,13 @@ sim_check_options(struct opt_odb_t *odb,        /* options database */
     }
   else /* dl1 is defined */
     {
-      if (sscanf(cache_dl1_opt, "%[^:]:%d:%d:%d:%c",
-		 name, &nsets, &bsize, &assoc, &c) != 5)
-	fatal("bad l1 D-cache parms: <name>:<nsets>:<bsize>:<assoc>:<repl>");
+      //cs203A
+      if (sscanf(cache_dl1_opt, "%[^:]:%d:%d:%d:%c:%d",
+		 name, &nsets, &bsize, &assoc, &c) != 6)
+	fatal("bad l1 D-cache parms: <name>:<nsets>:<bsize>:<assoc>:<repl>:<prefetchblkcount>");
       cache_dl1 = cache_create(name, nsets, bsize, /* balloc */FALSE,
 			       /* usize */0, assoc, cache_char2policy(c),
-			       dl1_access_fn, /* hit lat */cache_dl1_lat);
+			       dl1_access_fn, /* hit lat */cache_dl1_lat, dl1_prefetch_block_count);
 
       /* is the level 2 D-cache defined? */
       if (!mystricmp(cache_dl2_opt, "none"))
@@ -1092,7 +1098,7 @@ sim_check_options(struct opt_odb_t *odb,        /* options database */
 		  "<name>:<nsets>:<bsize>:<assoc>:<repl>");
 	  cache_dl2 = cache_create(name, nsets, bsize, /* balloc */FALSE,
 				   /* usize */0, assoc, cache_char2policy(c),
-				   dl2_access_fn, /* hit lat */cache_dl2_lat);
+				   dl2_access_fn, /* hit lat */cache_dl2_lat, 0);
 	}
     }
 
@@ -1130,12 +1136,13 @@ sim_check_options(struct opt_odb_t *odb,        /* options database */
     }
   else /* il1 is defined */
     {
-      if (sscanf(cache_il1_opt, "%[^:]:%d:%d:%d:%c",
-		 name, &nsets, &bsize, &assoc, &c) != 5)
-	fatal("bad l1 I-cache parms: <name>:<nsets>:<bsize>:<assoc>:<repl>");
+      //cs203A
+      if (sscanf(cache_il1_opt, "%[^:]:%d:%d:%d:%c:%d",
+		 name, &nsets, &bsize, &assoc, &c) != 6)
+	fatal("bad l1 I-cache parms: <name>:<nsets>:<bsize>:<assoc>:<repl>:<prefetchblkcount>");
       cache_il1 = cache_create(name, nsets, bsize, /* balloc */FALSE,
 			       /* usize */0, assoc, cache_char2policy(c),
-			       il1_access_fn, /* hit lat */cache_il1_lat);
+			       il1_access_fn, /* hit lat */cache_il1_lat, il1_prefetch_block_count);
 
       /* is the level 2 D-cache defined? */
       if (!mystricmp(cache_il2_opt, "none"))
@@ -1154,7 +1161,7 @@ sim_check_options(struct opt_odb_t *odb,        /* options database */
 		  "<name>:<nsets>:<bsize>:<assoc>:<repl>");
 	  cache_il2 = cache_create(name, nsets, bsize, /* balloc */FALSE,
 				   /* usize */0, assoc, cache_char2policy(c),
-				   il2_access_fn, /* hit lat */cache_il2_lat);
+				   il2_access_fn, /* hit lat */cache_il2_lat, 0);
 	}
     }
 
@@ -1166,10 +1173,11 @@ sim_check_options(struct opt_odb_t *odb,        /* options database */
       if (sscanf(itlb_opt, "%[^:]:%d:%d:%d:%c",
 		 name, &nsets, &bsize, &assoc, &c) != 5)
 	fatal("bad TLB parms: <name>:<nsets>:<page_size>:<assoc>:<repl>");
+      //cs203A
       itlb = cache_create(name, nsets, bsize, /* balloc */FALSE,
 			  /* usize */sizeof(md_addr_t), assoc,
 			  cache_char2policy(c), itlb_access_fn,
-			  /* hit latency */1);
+			  /* hit latency */1, 0);
     }
 
   /* use a D-TLB? */
@@ -1180,10 +1188,11 @@ sim_check_options(struct opt_odb_t *odb,        /* options database */
       if (sscanf(dtlb_opt, "%[^:]:%d:%d:%d:%c",
 		 name, &nsets, &bsize, &assoc, &c) != 5)
 	fatal("bad TLB parms: <name>:<nsets>:<page_size>:<assoc>:<repl>");
+      //cs203A
       dtlb = cache_create(name, nsets, bsize, /* balloc */FALSE,
 			  /* usize */sizeof(md_addr_t), assoc,
 			  cache_char2policy(c), dtlb_access_fn,
-			  /* hit latency */1);
+			  /* hit latency */1, 0);
     }
 
   if (cache_dl1_lat < 1)

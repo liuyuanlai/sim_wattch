@@ -156,6 +156,8 @@ struct cache_t
   int assoc;			/* cache associativity */
   enum cache_policy policy;	/* cache replacement policy */
   unsigned int hit_latency;	/* cache hit latency */
+  //cs203A
+  int prefetch_blk_count;
 
   /* miss/replacement handler, read/write BSIZE bytes starting at BADDR
      from/into cache block BLK, returns the latency of the operation
@@ -198,6 +200,9 @@ struct cache_t
   counter_t replacements;	/* total number of replacements at misses */
   counter_t writebacks;		/* total number of writebacks at misses */
   counter_t invalidations;	/* total number of external invalidations */
+  //cs203A
+  counter_t prefetch_hits; 
+  counter_t prefetch_misses;
 
   /* last block to hit, used to optimize cache hit processing */
   md_addr_t last_tagset;	/* tag of last line accessed */
@@ -225,7 +230,9 @@ cache_create(char *name,		/* name of the cache */
 					   md_addr_t baddr, int bsize,
 					   struct cache_blk_t *blk,
 					   tick_t now),
-	     unsigned int hit_latency);/* latency in cycles for a hit */
+	     unsigned int hit_latency,/* latency in cycles for a hit */
+       //cs203A
+       int prefetch_blk_count);
 
 /* parse policy */
 enum cache_policy			/* replacement policy enum */
@@ -263,6 +270,13 @@ cache_access(struct cache_t *cp,	/* cache to access */
 	     tick_t now,		/* time of access */
 	     byte_t **udata,		/* for return of user data ptr */
 	     md_addr_t *repl_addr);	/* for address of replaced block */
+
+//cs203A
+
+unsigned int        /* latency of access in cycles */
+cache_prefetch_block(struct cache_t *cp,  /* cache to access */
+       md_addr_t addr,    /* address of prefetch */
+       tick_t now);   /* time of access */
 
 /* cache access functions, these are safe, they check alignment and
    permissions */

@@ -46,12 +46,13 @@
 #include "machine.h"
 #include "cache.h"
 #include <assert.h>
-//cs203A
+//cs203A include new header file
 #include "dvfs_header.h"
 
 #define SensePowerfactor (Mhz)*(Vdd/2)*(Vdd/2)
 #define Sense2Powerfactor (Mhz)*(2*.3+.1*Vdd)
-//cs203A
+
+//cs203A fsf and vfs factor introduced
 #define Powerfactor (FSF*(Mhz)*VSF*VSF*Vdd*Vdd)
 #define LowSwingPowerfactor (Mhz)*.2*.2
 /* set scale for crossover (vdd->gnd) currents */
@@ -212,14 +213,21 @@ static double max_cycle_power_cc1 = 0.0;
 static double max_cycle_power_cc2 = 0.0;
 static double max_cycle_power_cc3 = 0.0;
 
-//cs203A
+//cs203A new varable for DVFS purpose
 extern tick_t sim_cycle;
+//cs203A dvfs interval
 extern int dvfs_interval;
+//cs203A dvfs target power
 extern double dvfs_target_power;
+//cs203A running total cycle power per interval
 static double running_total_cycle_power_per_interval = 0.0;
+//cs203A average power per interval
 static double avg_power_per_interval;
+//cs203A dvfs total time
 static double dvfs_total_time = 0;
+//cs203A dvfs current period time
 static double dvfs_current_period = 0;
+//cs203A dvfs total power consumption
 static double dvfs_total_power = 0;
 
 
@@ -593,25 +601,23 @@ void update_power_stats()
     resultbus_power_cc3+=turnoff_factor*power.resultbus;
 #endif
 
-//cs203A
-  double multifactor = FSF * VSF * VSF;
 
 
-//cs203A
+
   total_cycle_power = rename_power + bpred_power + window_power + 
     lsq_power + regfile_power + icache_power + dcache_power +
     alu_power + resultbus_power;
-//cs203A
+
   total_cycle_power_cc1 = rename_power_cc1 + bpred_power_cc1 +
     window_power_cc1 + lsq_power_cc1 + regfile_power_cc1 + 
     icache_power_cc1 + dcache_power_cc1 + alu_power_cc1 + 
     resultbus_power_cc1;
-//cs203A
+
   total_cycle_power_cc2 = rename_power_cc2 + bpred_power_cc2 + 
     window_power_cc2 + lsq_power_cc2 + regfile_power_cc2 + 
     icache_power_cc2 + dcache_power_cc2 + alu_power_cc2 + 
     resultbus_power_cc2;
-//cs203A
+
   total_cycle_power_cc3 = rename_power_cc3 + bpred_power_cc3 + 
     window_power_cc3 + lsq_power_cc3 + regfile_power_cc3 + 
     icache_power_cc3 + dcache_power_cc3 + alu_power_cc3 + 
@@ -625,7 +631,7 @@ void update_power_stats()
   total_cycle_power_cc2 += clock_power_cc2;
   total_cycle_power_cc3 += clock_power_cc3;
 
-//cs203A
+//cs203A current total cycle power
   current_total_cycle_power_cc1 = total_cycle_power_cc1
     -last_single_total_cycle_power_cc1;
   current_total_cycle_power_cc2 = total_cycle_power_cc2
@@ -641,12 +647,13 @@ void update_power_stats()
   last_single_total_cycle_power_cc2 = total_cycle_power_cc2;
   last_single_total_cycle_power_cc3 = total_cycle_power_cc3;
   //running_total_cycle_power_per_interval  += clock_power_cc1;
-//cs203A
+//cs203A running total power per interval
   running_total_cycle_power_per_interval  += current_total_cycle_power_cc1
   + current_total_cycle_power_cc2
   + current_total_cycle_power_cc3;
-//cs203A
+//cs203A 
   dvfs_current_period = 1.0 / (double)(Mhz*FSF);
+  dvfs_current_period= dvfs_current_period;//convert to ns
   dvfs_total_power += current_total_cycle_power_cc1 + 
       current_total_cycle_power_cc2  +
       current_total_cycle_power_cc3;
@@ -655,15 +662,13 @@ void update_power_stats()
   int my_cycle = (int)sim_cycle;
   if(my_cycle > 0 && my_cycle % ((int)dvfs_interval) == 0){
     printf("Call DVFS Controller>>>\n");
-    /* cs203A call dvfs controller if sim_cycle is divisible by DVFSInterval */
-    dvfs_controller();
-    // cs203A reset the current sum for the starting of new dvfs interval;
-    running_total_cycle_power_per_interval = 0;
+    dvfs_controller();//call dvfs controller every interval time
+    running_total_cycle_power_per_interval = 0;//reset next interval power to 0
   }
 
 }
 
-//cs203A
+//cs203A implementation of dvfs controller
 void dvfs_controller(){
 
   static int flag = 0;
@@ -675,7 +680,7 @@ void dvfs_controller(){
   static double last_avg_power=0;
   if (flag == 0){
 	  flag = 1;
-  	//f_dvfs = fopen("dvfs.txt","w");
+    //f_dvfs = fopen("dvfs.txt","w");
     fsf_dvfs = fopen("fsf_dvfs.txt","w+");
     vsf_dvfs = fopen("vsf_dvfs.txt","w+");
     avg_pwr_dvfs = fopen("avg_pwr_dvfs.txt","w+");
@@ -683,21 +688,21 @@ void dvfs_controller(){
   }
   //fprintf(f_dvfs, "FSF:%.6lf\n", FSF);
   fprintf(fsf_dvfs, "%.6lf\n", FSF);
-  fprintf(vsf_dvfs, "VSF:%.6lf\n", VSF);
-  //fprintf(vsf_dvfs, "%.6lf\n", VSF);
+  //fprintf(vsf_dvfs, "VSF:%.6lf\n", VSF);
+  fprintf(vsf_dvfs, "%.6lf\n", VSF);
   //fprintf(f_dvfs, "target:%.6lf\n", dvfs_target_power);
   fprintf(tgt_pwr_dvfs, "%.6lf\n", dvfs_target_power);
   avg_power_per_interval = running_total_cycle_power_per_interval / dvfs_interval;
   //fprintf(f_dvfs, "avg:%.6lf\n", avg_power_per_interval);
   fprintf(avg_pwr_dvfs, "%.6lf\n", avg_power_per_interval);
-  //fprintf(f_dvfs, "time:%.6lf\n", dvfs_total_time);
+  //fprintf(f_dvfs, "time:%.12lf\n", dvfs_total_time);
   //fprintf(f_dvfs, "total:%.6lf\n", dvfs_total_power);
   //fprintf(f_dvfs, "running total power per inter:%.6lf\n", running_total_cycle_power_per_interval);
 
   double temppower=avg_power_per_interval/(FSF*FSF*FSF);
 //  double lastpower=last_avg_power/(FSF*FSF*FSF);
   double prediction_power=temppower-last_avg_power+temppower;
-  if(prediction_power==0)prediction_power=temppower;
+  if(prediction_power<0)prediction_power=temppower;
   //fprintf(f_dvfs, "cur:%.6lf\n", temppower);
   //fprintf(f_dvfs, "last:%.6lf\n", last_avg_power);
   //fprintf(f_dvfs, "prediction:%.6lf\n", prediction_power);
@@ -715,34 +720,6 @@ void dvfs_controller(){
   VSF=FSF;
   calculate_power(&power);
   last_avg_power=temppower;
-/*
-  if( avg_power_per_interval < dvfs_target_power){
-
-    /* cs203A FSF's value is varied between 0.2 and 2.0.
-    if(FSF <= 1.8){
-      FSF += 0.2;
-    }
-
-  /* cs203A VSF's value is varied between 0.2 and 2.0.
-    if(VSF <= 1.8){
-      VSF += 0.2;
-    }
-    calculate_power(&power);
-}
-/* cs203A if average power in the last interval is greater than DVFSTargetPower, then the FSF and VSF is decremented by 0.2
-else if( avg_power_per_interval > dvfs_target_power){
-
-    /* cs203A FSF's value is varied between 0.2 and 2.0.
-    if(FSF >= 0.4){
-      FSF -= 0.2;
-    }
-
-    /* cs203A VSF's value is varied between 0.2 and 2.0.
-    if(VSF >= 0.4){
-      VSF -= 0.2;
-    }
-    calculate_power(&power);
-  }*/
 
 
 }
@@ -1071,7 +1048,7 @@ power_reg_stats(struct stat_sdb_t *sdb)	/* stats database */
   stat_reg_double(sdb, "max_cycle_power_cc2", "maximum cycle power usage of cc2", &max_cycle_power_cc2, 0, NULL);
 
   stat_reg_double(sdb, "max_cycle_power_cc3", "maximum cycle power usage of cc3", &max_cycle_power_cc3, 0, NULL);
-//cs203
+//cs203A register time and power to output file
   stat_reg_double(sdb, "total_dvfs_power", "dvfs total power",&dvfs_total_power, 0, NULL);
   
   stat_reg_formula(sdb, "avg_dvfs_power_cycle", "average dvfs power per cycle","total_dvfs_power/sim_cycle", NULL);
